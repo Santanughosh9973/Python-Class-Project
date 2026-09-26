@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}LibraryMS{% endblock %}</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="app-layout">
+
+    <!-- ================= SIDEBAR ================= -->
+
+    <aside class="sidebar">
+
+        <div class="brand">
+
+            <div class="brand-icon">
+                📖
+            </div>
+
+            <div>
+                <h2>LibraryMS</h2>
+                <span>Management System</span>
+            </div>
+
+        </div>
+
+
+        <nav class="sidebar-nav">
+
+            <p class="nav-title">MAIN MENU</p>
+
+            <a href="{{ url_for('dashboard') }}"
+               class="nav-link">
+                <span class="nav-icon">⌂</span>
+                <span>Dashboard</span>
+            </a>
+
+            <a href="{{ url_for('books') }}"
+               class="nav-link">
+                <span class="nav-icon">📚</span>
+                <span>Books</span>
+                <span class="nav-arrow">›</span>
+            </a>
+
+            <a href="{{ url_for('students') }}"
+               class="nav-link">
+                <span class="nav-icon">👥</span>
+                <span>Students</span>
+                <span class="nav-arrow">›</span>
+            </a>
+
+            <a href="{{ url_for('issue_book') }}"
+               class="nav-link">
+                <span class="nav-icon">📤</span>
+                <span>Issue Book</span>
+            </a>
+
+            <a href="{{ url_for('return_book') }}"
+               class="nav-link">
+                <span class="nav-icon">📥</span>
+                <span>Return Book</span>
+            </a>
+
+            <a href="{{ url_for('transactions') }}"
+               class="nav-link">
+                <span class="nav-icon">▣</span>
+                <span>Transactions</span>
+            </a>
+
+            <a href="{{ url_for('stats') }}"
+               class="nav-link">
+                <span class="nav-icon">▥</span>
+                <span>Statistics</span>
+            </a>
+
+
+            <div class="nav-divider"></div>
+
+            <p class="nav-title">SYSTEM</p>
+
+            <a href="#" class="nav-link">
+                <span class="nav-icon">⚙</span>
+                <span>Settings</span>
+            </a>
+
+            <a href="#" class="nav-link">
+                <span class="nav-icon">ⓘ</span>
+                <span>About</span>
+            </a>
+
+        </nav>
+
+
+        <div class="sidebar-footer">
+
+            <div class="footer-books">
+                📚
+            </div>
+
+            <strong>Knowledge Today</strong>
+            <span>A Better Tomorrow</span>
+
+        </div>
+
+    </aside>
+
+
+    <!-- ================= MAIN ================= -->
+
+    <main class="main-content">
+
+        <!-- TOP BAR -->
+
+        <header class="topbar">
+
+            <button class="menu-button">
+                ☰
+            </button>
+
+            <div class="search-box">
+
+                <span>⌕</span>
+
+                <input type="text"
+                       placeholder="Search books, students, transactions...">
+
+            </div>
+
+
+            <div class="topbar-right">
+
+                <div class="notification">
+                    🔔
+                    <span class="notification-dot"></span>
+                </div>
+
+                <div class="profile">
+
+                    <div class="profile-avatar">
+                        SG
+                    </div>
+
+                    <div class="profile-info">
+                        <strong>Santanu Ghosh</strong>
+                        <span>Administrator</span>
+                    </div>
+
+                    <span class="profile-arrow">⌄</span>
+
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- FLASH MESSAGES -->
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+
+            {% if messages %}
+
+                <div class="flash-container">
+
+                    {% for category, message in messages %}
+
+                        <div class="flash
+                            {% if category == 'error' %}
+                                flash-error
+                            {% else %}
+                                flash-success
+                            {% endif %}">
+
+                            {{ message }}
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+        {% endwith %}
+
+
+        <!-- PAGE -->
+
+        <div class="page-content">
+
+            {% block content %}{% endblock %}
+
+        </div>
+
+
+        <footer class="footer">
+            LibraryMS © 2026 • Library Management System
+        </footer>
+
+    </main>
+
+</div>
+
+</body>
+</html>

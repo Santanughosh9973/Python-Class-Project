@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Return Book{% endblock %}
+
+{% block page_title %}Return Book{% endblock %}
+
+{% block content %}
+
+<div class="form-card">
+
+    <div class="form-header">
+        <div>
+            <h2>Return a Book</h2>
+            <p>Return an issued book and calculate any overdue charge.</p>
+        </div>
+    </div>
+
+    <form method="POST" class="library-form">
+
+        <div class="form-group">
+
+            <label for="book_id">Select Issued Book</label>
+
+            <select id="book_id" name="book_id" required>
+
+                <option value="">
+                    -- Select a Book --
+                </option>
+
+                {% for book in books %}
+
+                <option value="{{ book.book_id }}">
+                    {{ book.book_id }} - {{ book.title }}
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+        </div>
+
+        <div class="info-box">
+
+            <strong>Return Information:</strong>
+
+            <p>
+                The system will automatically calculate the overdue
+                charge if the book is returned after the borrowing period.
+            </p>
+
+            <p>
+                Borrowing period:
+                <strong>14 days</strong>
+            </p>
+
+            <p>
+                Overdue charge:
+                <strong>₹5 per day</strong>
+            </p>
+
+        </div>
+
+        <div class="form-actions">
+
+            <a href="{{ url_for('dashboard') }}"
+               class="btn btn-secondary">
+                Cancel
+            </a>
+
+            <button type="submit"
+                    class="btn btn-primary">
+                Return Book
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

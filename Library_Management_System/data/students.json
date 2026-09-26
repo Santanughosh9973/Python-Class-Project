@@ -1,0 +1,56 @@
+[
+    {
+        "student_id": "BWU/MCA/26/022",
+        "name": "Santanu Ghosh",
+        "email": "santanughoshsg2005@gmail.com",
+        "phone": "06294159973"
+    },
+    {
+        "student_id": "BWU/MCA/26/020",
+        "name": "Rahul Das",
+        "email": "rahul@gmail.com",
+        "phone": "9876543211"
+    },
+    {
+        "student_id": "BWU/MCA/26/021",
+        "name": "Avijan Maity",
+        "email": "avijan@gmail.com",
+        "phone": "9876543212"
+    },
+    {
+        "student_id": "BWU/MCA/26/017",
+        "name": "Mrinal Das",
+        "email": "mrinal@gmail.com",
+        "phone": "9876543212"
+    },
+    {
+        "student_id": "BWU/MCA/26/018",
+        "name": "Kaushik Roy",
+        "email": "mrinal@gmail.com",
+        "phone": "9876543212"
+    },
+    {
+        "student_id": "BWU/BCA/23/374",
+        "name": "Sumit Bose",
+        "email": "sumit@gmail.com",
+        "phone": "9876543213"
+    },
+    {
+        "student_id": "BWU/MCA/26/019",
+        "name": "Abhishek Biswas",
+        "email": "abhishek@gmail.com",
+        "phone": "9876543215"
+    },
+    {
+        "student_id": "BWU/MCA/26/023",
+        "name": "Suprakash Das",
+        "email": "suprakash@gmail.com",
+        "phone": "9876543217"
+    },
+    {
+        "student_id": "BWU/MCA/26/024",
+        "name": "Siya Shaw",
+        "email": "siya@gmail.com",
+        "phone": "9876543218"
+    }
+]

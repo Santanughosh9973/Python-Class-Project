@@ -1,0 +1,12 @@
+[
+    {
+        "book_id": "B006",
+        "title": "JavaScript Guide",
+        "student_id": "BWU/BCA/23/374",
+        "issue_date": "2026-09-26",
+        "due_date": "2026-10-10",
+        "return_date": "",
+        "charge": 0,
+        "status": "Issued"
+    }
+]
