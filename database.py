@@ -7,6 +7,26 @@ import sqlite3
 import os
 
 
+class ConnectionContext:
+    """Wraps sqlite3.Connection to ensure it is closed when the context manager exits."""
+
+    def __init__(self, conn: sqlite3.Connection):
+        self._conn = conn
+
+    def __enter__(self) -> sqlite3.Connection:
+        self._conn.__enter__()
+        return self._conn
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            return self._conn.__exit__(exc_type, exc_val, exc_tb)
+        finally:
+            self._conn.close()
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+
 class DatabaseManager:
     """
     Manages the SQLite3 database connection and schema.
@@ -30,18 +50,18 @@ class DatabaseManager:
         self.close()
         return False
 
-    def get_connection(self) -> sqlite3.Connection:
+    def get_connection(self) -> ConnectionContext:
         """
         Provides a database connection with Row factory enabled.
 
         Returns:
-            sqlite3.Connection: A configured database connection.
+            ConnectionContext: A configured database connection context manager.
         """
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         # Enable foreign key enforcement
         conn.execute("PRAGMA foreign_keys = ON")
-        return conn
+        return ConnectionContext(conn)
 
     def init_db(self) -> None:
         """

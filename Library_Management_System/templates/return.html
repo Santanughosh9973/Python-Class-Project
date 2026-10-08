@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Return Book | LibraryMS{% endblock %}
+
+{% block page_title %}Return Book{% endblock %}
+
+{% block content %}
+
+<div class="operation-page">
+
+    <!-- PAGE HEADER -->
+    <div class="operation-header">
+        <div>
+            <h1>Return a Book</h1>
+            <p>Return an issued book and calculate any overdue charges.</p>
+        </div>
+    </div>
+
+    <!-- RETURN BOOK CARD -->
+    <div class="operation-card">
+        <form
+            method="POST"
+            action="{{ url_for('return_book') }}"
+        >
+
+            <!-- SELECT BOOK -->
+            <div class="operation-field">
+                <label for="book_id">
+                    Select Issued Book
+                </label>
+
+                <select
+                    id="book_id"
+                    name="book_id"
+                    required
+                >
+                    <option value="">
+                        -- Select an Issued Book --
+                    </option>
+
+                    {% for book in issued_books %}
+                    <option value="{{ book.book_id }}">
+                        {{ book.book_id }} — {{ book.title }}
+                        {%- if book.author %} ({{ book.author }}){% endif -%}
+                        {%- if book.borrower %} — Borrowed by: {{ book.borrower }}{% elif book.student_id %} — Borrowed by: {{ book.student_id }}{% endif -%}
+                        {%- if book.due_date %} [Due: {{ book.due_date }}]{% endif -%}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- INFORMATION BOX -->
+            <div class="operation-information">
+                <div class="information-title">
+                    📥 Return Information
+                </div>
+
+                <p>
+                    The system automatically calculates the overdue charge if the book is returned after its due date.
+                </p>
+
+                <p>
+                    Borrowing period:
+                    <strong>14 days</strong>
+                </p>
+
+                <p>
+                    Overdue charge:
+                    <strong>₹5.00 per day</strong>
+                </p>
+            </div>
+
+            <!-- BUTTONS -->
+            <div class="operation-buttons">
+                <a
+                    href="{{ url_for('dashboard') }}"
+                    class="operation-cancel"
+                >
+                    Cancel
+                </a>
+
+                <button
+                    type="submit"
+                    class="operation-submit"
+                    {% if not issued_books %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}
+                >
+                    📥 Return Book
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- EMPTY BOOK WARNING -->
+    {% if not issued_books %}
+    <div class="operation-warning">
+        <strong>No books currently issued.</strong>
+        <span>All library books are currently available in the catalog.</span>
+        <a href="{{ url_for('issue_book') }}">
+            📤 Issue a Book
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- PAGE FOOTER -->
+<div class="operation-footer">
+    <span>LibraryMS © 2026</span>
+    <span>•</span>
+    <span>Library Management System</span>
+</div>
+
+{% endblock %}

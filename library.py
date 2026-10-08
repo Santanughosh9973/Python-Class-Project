@@ -43,6 +43,17 @@ class Library:
     def __init__(self, db_path: str = "library.db"):
         self.db = DatabaseManager(db_path)
 
+    def close(self) -> None:
+        """Closes the underlying database manager."""
+        self.db.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
+
     # ==========================================================================
     # Book Management
     # ==========================================================================

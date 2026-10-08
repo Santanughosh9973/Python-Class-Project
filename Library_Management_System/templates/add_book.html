@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+Add Book | LibraryMS
+{% endblock %}
+
+
+{% block page_title %}
+Add Book
+{% endblock %}
+
+
+{% block content %}
+
+
+<!-- ================================= -->
+<!-- ADD BOOK FORM -->
+<!-- ================================= -->
+
+<div class="form-card card">
+
+
+    <!-- Heading -->
+
+    <div class="section-heading">
+
+        <div>
+
+            <span class="eyebrow">
+                BOOK MANAGEMENT
+            </span>
+
+            <h3>
+                Add a new book
+            </h3>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- Form -->
+
+    <form
+        method="post"
+        class="form-grid"
+    >
+
+
+        <!-- Book ID -->
+
+        <label>
+
+            Book ID
+
+            <input
+                type="text"
+                name="book_id"
+                required
+                placeholder="B005"
+            >
+
+        </label>
+
+
+
+        <!-- Title -->
+
+        <label>
+
+            Title
+
+            <input
+                type="text"
+                name="title"
+                required
+                placeholder="Book title"
+            >
+
+        </label>
+
+
+
+        <!-- Author -->
+
+        <label>
+
+            Author
+
+            <input
+                type="text"
+                name="author"
+                required
+                placeholder="Author name"
+            >
+
+        </label>
+
+
+
+        <!-- Category -->
+
+        <label>
+
+            Category
+
+            <input
+                type="text"
+                name="category"
+                required
+                placeholder="Programming"
+            >
+
+        </label>
+
+
+
+        <!-- Year -->
+
+        <label>
+
+            Publication Year
+
+            <input
+                type="text"
+                name="year"
+                required
+                maxlength="4"
+                placeholder="2026"
+            >
+
+        </label>
+
+
+
+        <!-- Buttons -->
+
+        <div class="form-actions">
+
+
+            <!-- Cancel -->
+
+            <a
+                class="btn ghost"
+                href="{{ url_for('books') }}"
+            >
+                Cancel
+            </a>
+
+
+            <!-- Save -->
+
+            <button
+                class="btn primary"
+                type="submit"
+            >
+                Save Book
+            </button>
+
+
+        </div>
+
+
+    </form>
+
+
+</div>
+
+
+{% endblock %}

@@ -7,8 +7,21 @@ so the user never needs to remember IDs externally.
 """
 
 import os
+import sys
 from datetime import date
 from typing import List
+
+# Ensure terminal output supports Unicode without raising UnicodeEncodeError on Windows
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 from library import Library
 from models import (

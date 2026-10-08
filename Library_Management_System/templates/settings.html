@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Settings | LibraryMS{% endblock %}
+
+{% block page_title %}System Settings{% endblock %}
+
+{% block content %}
+
+<div class="operation-page">
+
+    <!-- PAGE HEADER -->
+    <div class="operation-header">
+        <div>
+            <h1>System Settings</h1>
+            <p>Configure circulation policies, library identity, administrator details, and preferences.</p>
+        </div>
+    </div>
+
+
+    <!-- SETTINGS GRID -->
+    <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: start;">
+
+        <!-- FORM CARD -->
+        <div class="operation-card">
+
+            <div style="margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #edf1f6;">
+                <h2 style="font-size: 16px; font-weight: 800; color: #111d3b; margin: 0 0 4px 0;">Configuration Parameters</h2>
+                <span style="font-size: 12px; color: var(--muted);">Changes will take effect immediately across all loan & return calculations.</span>
+            </div>
+
+            <form method="POST" action="{{ url_for('settings') }}">
+
+                <!-- SECTION 1: LIBRARY DETAILS -->
+                <div style="margin-bottom: 18px;">
+                    <div style="font-size: 11px; font-weight: 800; color: var(--primary); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">
+                        🏢 Library & Institution
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+
+                        <div class="operation-field">
+                            <label for="library_name">Library Name</label>
+                            <input
+                                type="text"
+                                id="library_name"
+                                name="library_name"
+                                value="{{ settings.library_name }}"
+                                required
+                                style="width: 100%; height: 41px; padding: 0 12px; border: 1px solid #dce5f1; border-radius: 8px; font-size: 12px; outline: none;"
+                            >
+                        </div>
+
+                        <div class="operation-field">
+                            <label for="institution_name">Institution / College</label>
+                            <input
+                                type="text"
+                                id="institution_name"
+                                name="institution_name"
+                                value="{{ settings.institution_name }}"
+                                placeholder="e.g. Brainware University"
+                                style="width: 100%; height: 41px; padding: 0 12px; border: 1px solid #dce5f1; border-radius: 8px; font-size: 12px; outline: none;"
+                            >
+                        </div>
+
+                    </div>
+                </div>
+
+
+                <!-- SECTION 2: CIRCULATION POLICIES -->
+                <div style="margin-bottom: 18px;">
+                    <div style="font-size: 11px; font-weight: 800; color: var(--orange); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">
+                        ⏱️ Lending & Fines Policy
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 100px; gap: 14px;">
+
+                        <div class="operation-field">
+                            <label for="borrow_days">Borrowing Period (Days)</label>
+                            <input
+                                type="number"
+                                id="borrow_days"
+                                name="borrow_days"
+                                min="1"
+                                max="90"
+                                value="{{ settings.borrow_days }}"
+                                required
+                                style="width: 100%; height: 41px; padding: 0 12px; border: 1px solid #dce5f1; border-radius: 8px; font-size: 12px; outline: none;"
+                            >
+                        </div>
+
+                        <div class="operation-field">
+                            <label for="daily_overdue_charge">Overdue Charge / Day</label>
+                            <input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                id="daily_overdue_charge"
+                                name="daily_overdue_charge"
+                                value="{{ settings.daily_overdue_charge }}"
+                                required
+                                style="width: 100%; height: 41px; padding: 0 12px; border: 1px solid #dce5f1; border-radius: 8px; font-size: 12px; outline: none;"
+                            >
+                        </div>
+
+                        <div class="operation-field">
+                            <label for="currency_symbol">Currency</label>
+                            <input
+                                type="text"
+                                id="currency_symbol"
+                                name="currency_symbol"
+                                value="{{ settings.currency_symbol }}"
+                                required
+                                style="width: 100%; height: 41px; padding: 0 12px; border: 1px solid #dce5f1; border-radius: 8px; font-size: 12px; text-align: center; outline: none;"
+                            >
+                        </div>
+
+                    </div>
+                </div>
+
+
+                <!-- SECTION 3: ADMINISTRATOR INFO -->
+                <div style="margin-bottom: 18px;">
+                    <div style="font-size: 11px; font-weight: 800; color: var(--purple); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px;">
+                        👤 Administrator Details
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+
+                        <div class="operation-field">
+                            <label for="admin_name">Administrator Name</label>
+                            <input
+                                type="text"
+                                id="admin_name"
+                                name="admin_name"
+                                value="{{ settings.admin_name }}"
+                                required
+                                style="width: 100%; height: 41px; padding: 0 12px; border: 1px solid #dce5f1; border-radius: 8px; font-size: 12px; outline: none;"
+                            >
+                        </div>
+
+                        <div class="operation-field">
+                            <label for="admin_email">Contact Email</label>
+                            <input
+                                type="email"
+                                id="admin_email"
+                                name="admin_email"
+                                value="{{ settings.admin_email }}"
+                                placeholder="admin@libraryms.com"
+                                style="width: 100%; height: 41px; padding: 0 12px; border: 1px solid #dce5f1; border-radius: 8px; font-size: 12px; outline: none;"
+                            >
+                        </div>
+
+                    </div>
+                </div>
+
+
+                <!-- INFORMATION BOX -->
+                <div class="operation-information">
+                    <div class="information-title">
+                        💡 System Notice
+                    </div>
+                    <p>
+                        Updating the borrowing period applies to all <strong>future issues</strong>. Overdue fines on existing active loans will recalculate using the current overdue rate upon return.
+                    </p>
+                </div>
+
+
+                <!-- ACTION BUTTONS -->
+                <div class="operation-buttons">
+                    <a href="{{ url_for('dashboard') }}" class="operation-cancel">
+                        Cancel
+                    </a>
+
+                    <button type="submit" class="operation-submit">
+                        💾 Save Settings
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+
+
+        <!-- RIGHT SIDE: DIAGNOSTICS & SYSTEM STATUS -->
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+
+            <!-- Status Card -->
+            <div class="table-card">
+                <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #edf1f6;">
+                    <h3 style="font-size: 14px; font-weight: 800; color: #111d3b; margin: 0 0 2px 0;">📊 Live Data Stores</h3>
+                    <span style="font-size: 11px; color: var(--muted);">Data files stored in /data folder</span>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 10px; font-size: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>📚 books.json</span>
+                        <strong style="color: var(--primary);">{{ book_count }} Records</strong>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>👥 students.json</span>
+                        <strong style="color: var(--green);">{{ student_count }} Records</strong>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>🔄 transactions.json</span>
+                        <strong style="color: var(--purple);">{{ issued_count }} Issued</strong>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>⚙ settings.json</span>
+                        <span class="premium-status returned-status" style="padding: 2px 8px; font-size: 9px;">Active</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Links Card -->
+            <div class="table-card">
+                <div style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #edf1f6;">
+                    <h3 style="font-size: 14px; font-weight: 800; color: #111d3b; margin: 0 0 2px 0;">⚡ Navigation Shortcuts</h3>
+                    <span style="font-size: 11px; color: var(--muted);">Access other system modules</span>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <a href="{{ url_for('about') }}" class="btn btn-secondary" style="justify-content: flex-start; gap: 8px; width: 100%;">
+                        <span>ⓘ</span> About This System
+                    </a>
+                    <a href="{{ url_for('stats') }}" class="btn btn-secondary" style="justify-content: flex-start; gap: 8px; width: 100%;">
+                        <span>📊</span> View Detailed Statistics
+                    </a>
+                    <a href="{{ url_for('transactions') }}" class="btn btn-secondary" style="justify-content: flex-start; gap: 8px; width: 100%;">
+                        <span>🔄</span> View Circulation Logs
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- PAGE FOOTER -->
+<div class="operation-footer">
+    <span>{{ settings.library_name }} © 2026</span>
+    <span>•</span>
+    <span>System Administration</span>
+</div>
+
+{% endblock %}

@@ -5,6 +5,19 @@ Runs an interactive continuous terminal loop presenting a menu of operations.
 
 import sys
 
+# Ensure terminal output supports Unicode (e.g. box drawing, rupee symbol, emojis)
+# without raising UnicodeEncodeError on Windows systems with legacy cp1252/cp437 code pages.
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from library import Library
 from models import LibraryError, InvalidOperationError
 from views import (
@@ -95,6 +108,7 @@ def main_loop() -> None:
             print("\n")
             display_header("Goodbye!")
             print("  Thank you for using the Library Management System.\n")
+            library.close()
             sys.exit(0)
 
         print()
@@ -112,6 +126,7 @@ def main_loop() -> None:
                 print("  Goodbye! 👋")
                 display_separator()
                 print()
+                library.close()
                 sys.exit(0)
             else:
                 continue

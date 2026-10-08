@@ -29,12 +29,23 @@ class TestLibrarySetup(unittest.TestCase):
     def setUp(self):
         """Create a temporary database file for isolation."""
         self.db_fd, self.db_path = tempfile.mkstemp(suffix=".db")
+        os.close(self.db_fd)
         self.library = Library(db_path=self.db_path)
 
     def tearDown(self):
         """Remove the temporary database after each test."""
-        os.close(self.db_fd)
-        os.unlink(self.db_path)
+        if hasattr(self, "library"):
+            self.library.close()
+        if os.path.exists(self.db_path):
+            try:
+                os.unlink(self.db_path)
+            except OSError:
+                import gc
+                gc.collect()
+                try:
+                    os.unlink(self.db_path)
+                except Exception:
+                    pass
 
 
 # ==============================================================================

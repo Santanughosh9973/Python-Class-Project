@@ -1,0 +1,25 @@
+[
+    {
+        "book_id": "B006",
+        "title": "JavaScript Guide",
+        "student_id": "BWU/BCA/23/374",
+        "issue_date": "2026-09-26",
+        "due_date": "2026-10-10",
+        "return_date": "2026-10-08",
+        "charge": 0.0,
+        "status": "Returned",
+        "overdue_charge": 0.0
+    },
+    {
+        "transaction_id": "T002",
+        "book_id": "B006",
+        "title": "JavaScript Guide",
+        "student_id": "BWU/BCA/23/374",
+        "issue_date": "2026-10-08",
+        "due_date": "2026-10-22",
+        "return_date": "",
+        "charge": 0,
+        "overdue_charge": 0,
+        "status": "Issued"
+    }
+]
