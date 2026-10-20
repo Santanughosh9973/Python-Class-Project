@@ -82,8 +82,8 @@ def main_loop() -> None:
     clear_screen()
     print()
     print("  ╔══════════════════════════════════════════════════════════════╗")
-    print("  ║        Welcome to the Library Management System!            ║")
-    print("  ║        Powered by SQLite3  |  Built with Python OOP         ║")
+    print("  ║        Welcome to the Library Management System!             ║")
+    print("  ║        Powered by SQLite3  |  Built with Python OOP          ║")
     print("  ╚══════════════════════════════════════════════════════════════╝")
 
     while True:
