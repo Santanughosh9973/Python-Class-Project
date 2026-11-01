@@ -21,5 +21,17 @@
         "charge": 0,
         "overdue_charge": 0,
         "status": "Issued"
+    },
+    {
+        "transaction_id": "T003",
+        "book_id": "B001",
+        "title": "Python Programming",
+        "student_id": "BWU/MCA/26/022",
+        "issue_date": "2026-10-09",
+        "due_date": "2026-10-23",
+        "return_date": "",
+        "charge": 0,
+        "overdue_charge": 0,
+        "status": "Issued"
     }
 ]

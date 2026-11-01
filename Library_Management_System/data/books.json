@@ -5,7 +5,7 @@
         "author": "John Smith",
         "category": "Programming",
         "year": "2024",
-        "status": "Available"
+        "status": "Issued"
     },
     {
         "book_id": "B002",
@@ -45,7 +45,10 @@
         "author": "David Flanagan",
         "category": "Web Development",
         "year": "2024",
-        "status": "Issued"
+        "status": "Issued",
+        "student_id": "BWU/BCA/23/374",
+        "borrower": "Sumit Bose (BWU/BCA/23/374)",
+        "due_date": "2026-10-22"
     },
     {
         "book_id": "B007",
@@ -69,6 +72,22 @@
         "author": "Avijan Mayti",
         "category": "Book",
         "year": "2026",
+        "status": "Available"
+    },
+    {
+        "book_id": "B0010",
+        "title": "Basic Python",
+        "author": "Rahul DAs",
+        "category": "python",
+        "year": "2025",
+        "status": "Available"
+    },
+    {
+        "book_id": "B0011",
+        "title": "c++",
+        "author": "Rahul DAs",
+        "category": "c",
+        "year": "2025",
         "status": "Available"
     }
 ]

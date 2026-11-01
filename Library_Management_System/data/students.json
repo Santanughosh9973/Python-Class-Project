@@ -48,12 +48,6 @@
         "phone": "9876543217"
     },
     {
-        "student_id": "BWU/MCA/26/024",
-        "name": "Siya Shaw",
-        "email": "siya@gmail.com",
-        "phone": "9876543218"
-    },
-    {
         "student_id": "BWU/BCA/23/370",
         "name": "Soujosh Chowdhury",
         "email": "soujosh2005@gmail.com",
@@ -64,5 +58,11 @@
         "name": "Debasis Ghosh",
         "email": "debasisghosh@gmail.com",
         "phone": "6214789416"
+    },
+    {
+        "student_id": "bwu/mca/23/317",
+        "name": "rahul ghosh",
+        "email": "bwubca23317@brainwareuniversity.ac.in",
+        "phone": "46414562455"
     }
 ]

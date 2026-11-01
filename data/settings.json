@@ -1,0 +1,9 @@
+{
+    "library_name": "LibraryMS",
+    "institution_name": "Brainware University",
+    "borrow_days": 14,
+    "daily_overdue_charge": 5.0,
+    "admin_name": "Santanu Ghosh",
+    "admin_email": "santanu@libraryms.edu",
+    "currency_symbol": "\u20b9"
+}

@@ -48,45 +48,45 @@
             <p class="nav-title">MAIN MENU</p>
 
             <a href="{{ url_for('dashboard') }}"
-               class="nav-link">
+               class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
                 <span class="nav-icon">⌂</span>
                 <span>Dashboard</span>
             </a>
 
             <a href="{{ url_for('books') }}"
-               class="nav-link">
+               class="nav-link {% if request.endpoint in ['books', 'add_book'] %}active{% endif %}">
                 <span class="nav-icon">📚</span>
                 <span>Books</span>
                 <span class="nav-arrow">›</span>
             </a>
 
             <a href="{{ url_for('students') }}"
-               class="nav-link">
+               class="nav-link {% if request.endpoint in ['students', 'add_student'] %}active{% endif %}">
                 <span class="nav-icon">👥</span>
                 <span>Students</span>
                 <span class="nav-arrow">›</span>
             </a>
 
             <a href="{{ url_for('issue_book') }}"
-               class="nav-link">
+               class="nav-link {% if request.endpoint == 'issue_book' %}active{% endif %}">
                 <span class="nav-icon">📤</span>
                 <span>Issue Book</span>
             </a>
 
             <a href="{{ url_for('return_book') }}"
-               class="nav-link">
+               class="nav-link {% if request.endpoint == 'return_book' %}active{% endif %}">
                 <span class="nav-icon">📥</span>
                 <span>Return Book</span>
             </a>
 
             <a href="{{ url_for('transactions') }}"
-               class="nav-link">
+               class="nav-link {% if request.endpoint == 'transactions' %}active{% endif %}">
                 <span class="nav-icon">▣</span>
                 <span>Transactions</span>
             </a>
 
             <a href="{{ url_for('stats') }}"
-               class="nav-link">
+               class="nav-link {% if request.endpoint == 'stats' %}active{% endif %}">
                 <span class="nav-icon">▥</span>
                 <span>Statistics</span>
             </a>
@@ -96,12 +96,14 @@
 
             <p class="nav-title">SYSTEM</p>
 
-            <a href="{{ url_for('settings') }}" class="nav-link">
+            <a href="{{ url_for('settings') }}"
+               class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}">
                 <span class="nav-icon">⚙</span>
                 <span>Settings</span>
             </a>
 
-            <a href="{{ url_for('about') }}" class="nav-link">
+            <a href="{{ url_for('about') }}"
+               class="nav-link {% if request.endpoint == 'about' %}active{% endif %}">
                 <span class="nav-icon">ⓘ</span>
                 <span>About</span>
             </a>
@@ -218,6 +220,69 @@
     </main>
 
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const sidebarNav = document.querySelector(".sidebar-nav");
+        if (!sidebarNav) return;
+
+        const navLinks = sidebarNav.querySelectorAll(".nav-link");
+
+        // Helper function to set the active link and clear all others
+        function setActiveLink(activeEl) {
+            navLinks.forEach(link => link.classList.remove("active"));
+            if (activeEl) {
+                activeEl.classList.add("active");
+            }
+        }
+
+        // 1. Click Handling: Immediate visual feedback when any navigation button is clicked
+        // Uses event delegation on the nav container to prevent duplicate listeners
+        sidebarNav.addEventListener("click", function (event) {
+            const clickedLink = event.target.closest(".nav-link");
+            if (clickedLink && sidebarNav.contains(clickedLink)) {
+                setActiveLink(clickedLink);
+            }
+        });
+
+        // 2. Dynamic / Multi-page Sync: Syncs active state with current location pathname
+        function syncActiveWithLocation() {
+            const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+            let matched = false;
+
+            // First pass: exact match with link href
+            navLinks.forEach(link => {
+                const href = link.getAttribute("href");
+                if (!href) return;
+                try {
+                    const linkPath = new URL(href, window.location.origin).pathname.replace(/\/+$/, "") || "/";
+                    if (linkPath === currentPath) {
+                        setActiveLink(link);
+                        matched = true;
+                    }
+                } catch (e) {}
+            });
+
+            // Second pass: prefix match for sub-routes (e.g. /books/add -> /books, /students/add -> /students)
+            if (!matched && currentPath !== "/") {
+                navLinks.forEach(link => {
+                    const href = link.getAttribute("href");
+                    if (!href) return;
+                    try {
+                        const linkPath = new URL(href, window.location.origin).pathname.replace(/\/+$/, "") || "/";
+                        if (linkPath !== "/" && currentPath.startsWith(linkPath)) {
+                            setActiveLink(link);
+                            matched = true;
+                        }
+                    } catch (e) {}
+                });
+            }
+        }
+
+        // Listen for history popstate events (browser forward/back buttons)
+        window.addEventListener("popstate", syncActiveWithLocation);
+    });
+</script>
 
 </body>
 </html>
