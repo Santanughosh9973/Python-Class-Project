@@ -1,807 +1,531 @@
-"""
-library.py — Core Library service class for the Library Management System.
-Encapsulates all business logic: book management, student registration,
-issue/return transactions, fine payment tracking, overdue fee computation,
-and statistics.
-"""
-
-import sqlite3
-from datetime import date, timedelta, datetime
-from typing import List, Optional
-
-from database import DatabaseManager
-from models import (
-    Book,
-    Student,
-    BookNotFoundError,
-    StudentNotFoundError,
-    IssueNotFoundError,
-    BookUnavailableError,
-    BookNotIssuedError,
-    AlreadyIssuedError,
-    FineNotDueError,
-    DuplicateEmailError,
-    InvalidOperationError,
-)
+import json
+from datetime import date, timedelta
+from pathlib import Path
 
 
-# Lending configuration constants
-DEFAULT_LENDING_DAYS: int = 7           # Borrow window in days
-FINE_RATE_PER_DAY: float = 5.0         # Overdue fine per day (in currency units)
-TOP_ISSUED_BOOKS_LIMIT: int = 3        # How many top-issued books to report
+# Custom exception for library errors.This is our custom exception.
+class LibraryError(Exception):
+    pass
 
 
+# Book class
+class Book:
+    def __init__(self, book_id, title, author, category, year, status="Available"):
+        self.book_id = book_id
+        self.title = title
+        self.author = author
+        self.category = category
+        self.year = str(year)
+        self.status = status
+
+    def to_dict(self):
+        return self.__dict__.copy()
+
+
+# Student class
+class Student:
+    def __init__(self, student_id, name, email="", phone=""):
+        self.student_id = student_id
+        self.name = name
+        self.email = email
+        self.phone = phone
+
+    def to_dict(self):
+        return self.__dict__.copy()
+
+
+# Main Library class
 class Library:
-    """
-    Provides all library operations including catalog management,
-    member management, book lending, fine tracking, and reporting.
 
-    Attributes:
-        db (DatabaseManager): Underlying database manager instance.
-    """
+    # Default Settings
+    DEFAULT_SETTINGS = {
+        "library_name": "LibraryMS",
+        "institution_name": "Brainware University",
+        "borrow_days": 14,
+        "daily_overdue_charge": 5.0,
+        "admin_name": "Santanu Ghosh",
+        "admin_email": "santanu@libraryms.edu",
+        "currency_symbol": "₹"
+    }
 
-    def __init__(self, db_path: str = "library.db"):
-        self.db = DatabaseManager(db_path)
+    # Maximum borrowing period
+    BORROW_DAYS = 14
 
-    def close(self) -> None:
-        """Closes the underlying database manager."""
-        self.db.close()
+    # Fine per overdue day
+    DAILY_OVERDUE_CHARGE = 5.0
 
-    def __enter__(self):
-        return self
+    def __init__(self, data_dir="data"):
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-        return False
+        # Create data folder if it does not exist
+        self.data_dir = Path(data_dir)
+        self.data_dir.mkdir(exist_ok=True)
 
-    # ==========================================================================
-    # Book Management
-    # ==========================================================================
+        # Data file locations
+        self.books_file = self.data_dir / "books.json"
+        self.students_file = self.data_dir / "students.json"
+        self.transactions_file = self.data_dir / "transactions.json"
+        self.settings_file = self.data_dir / "settings.json"
 
-    def add_book(self, title: str, author: str, copies: int = 1) -> Book:
-        """
-        Adds a new book entry to the catalog.
+        # Load existing data
+        self.books = self._load(self.books_file, [])
+        self.students = self._load(self.students_file, [])
+        self.transactions = self._load(self.transactions_file, [])
+        self.settings = self._load(self.settings_file, self.DEFAULT_SETTINGS.copy())
 
-        Args:
-            title (str): Book title.
-            author (str): Book author name.
-            copies (int): Number of copies to add (must be >= 1).
+        # Sync runtime constants with settings
+        self.BORROW_DAYS = int(self.settings.get("borrow_days", 14))
+        self.DAILY_OVERDUE_CHARGE = float(self.settings.get("daily_overdue_charge", 5.0))
 
-        Returns:
-            Book: The newly created Book object with its assigned ID.
+    # ------------------------------------------------
+    # FILE HANDLING
+    # ------------------------------------------------
 
-        Raises:
-            InvalidOperationError: If copies < 1 or title/author are empty.
-        """
-        title = title.strip()
-        author = author.strip()
+    def _load(self, path, default):
 
-        if not title:
-            raise InvalidOperationError("Book title cannot be empty.")
-        if not author:
-            raise InvalidOperationError("Book author cannot be empty.")
-        if copies < 1:
-            raise InvalidOperationError(
-                f"Number of copies must be at least 1, got {copies}."
-            )
+        try:
+            # Check whether file exists
+            if not path.exists():
 
-        with self.db.get_connection() as conn:
-            cursor = conn.execute(
-                """
-                INSERT INTO books (title, author, total_copies, available_copies)
-                VALUES (?, ?, ?, ?)
-                """,
-                (title, author, copies, copies),
-            )
-            conn.commit()
-            book_id = cursor.lastrowid
+                # Create the file with default data
+                self._save(path, default)
 
-        return Book(
-            book_id=book_id,
-            title=title,
-            author=author,
-            total_copies=copies,
-            available_copies=copies,
+                return default.copy()
+
+            # Open JSON file
+            with open(path, "r", encoding="utf-8") as file:
+
+                # Convert JSON into Python data
+                return json.load(file)
+
+        except (json.JSONDecodeError, OSError):
+
+            # Return empty/default data if file has a problem
+            return default.copy()
+
+    def _save(self, path, data):
+
+        # Open file for writing
+        with open(path, "w", encoding="utf-8") as file:
+
+            # Save Python data as JSON
+            json.dump(data, file, indent=4)
+
+    def _save_all(self):
+
+        # Save all library records
+        self._save(self.books_file, self.books)
+        self._save(self.students_file, self.students)
+        self._save(self.transactions_file, self.transactions)
+        self._save(self.settings_file, self.settings)
+
+    # ------------------------------------------------
+    # SETTINGS
+    # ------------------------------------------------
+
+    def get_settings(self):
+        return self.settings.copy()
+
+    def update_settings(self, new_settings):
+
+        try:
+            borrow_days = int(new_settings.get("borrow_days", self.BORROW_DAYS))
+            if borrow_days < 1 or borrow_days > 90:
+                raise LibraryError("Borrowing period must be between 1 and 90 days.")
+        except (ValueError, TypeError):
+            raise LibraryError("Borrowing period must be a valid number.")
+
+        try:
+            overdue_charge = float(new_settings.get("daily_overdue_charge", self.DAILY_OVERDUE_CHARGE))
+            if overdue_charge < 0:
+                raise LibraryError("Daily overdue charge cannot be negative.")
+        except (ValueError, TypeError):
+            raise LibraryError("Daily overdue charge must be a valid number.")
+
+        self.settings["library_name"] = str(new_settings.get("library_name", "LibraryMS")).strip() or "LibraryMS"
+        self.settings["institution_name"] = str(new_settings.get("institution_name", "")).strip()
+        self.settings["borrow_days"] = borrow_days
+        self.settings["daily_overdue_charge"] = overdue_charge
+        self.settings["admin_name"] = str(new_settings.get("admin_name", "Santanu Ghosh")).strip()
+        self.settings["admin_email"] = str(new_settings.get("admin_email", "")).strip()
+        self.settings["currency_symbol"] = str(new_settings.get("currency_symbol", "₹")).strip() or "₹"
+
+        self.BORROW_DAYS = borrow_days
+        self.DAILY_OVERDUE_CHARGE = overdue_charge
+
+        self._save(self.settings_file, self.settings)
+        return self.settings.copy()
+
+    # ------------------------------------------------
+    # BOOK OPERATIONS
+    # ------------------------------------------------
+
+    def add_book(self, book_id, title, author, category, year):
+
+        # Check required fields
+        if not all([book_id, title, author, category, year]):
+            raise LibraryError("All book fields are required.")
+
+        # Check duplicate book ID
+        if any(
+            book["book_id"].lower() == book_id.lower()
+            for book in self.books
+        ):
+            raise LibraryError("Book ID already exists.")
+
+        # Check year
+        if not year.isdigit() or len(year) != 4:
+            raise LibraryError("Year must be a valid 4-digit number.")
+
+        # Create Book object
+        book = Book(
+            book_id,
+            title,
+            author,
+            category,
+            year
         )
 
-    def display_available_books(self) -> List[Book]:
-        """
-        Retrieves all books that have at least one available copy.
+        # Convert object into dictionary
+        self.books.append(book.to_dict())
 
-        Returns:
-            List[Book]: List of Book objects with available copies.
-        """
-        with self.db.get_connection() as conn:
-            rows = conn.execute(
-                """
-                SELECT * FROM books
-                WHERE available_copies > 0
-                ORDER BY title ASC
-                """
-            ).fetchall()
+        # Save data
+        self._save_all()
 
-        return [Book.from_row(row) for row in rows]
+    def delete_book(self, book_id):
 
-    def list_all_books(self) -> List[Book]:
-        """
-        Retrieves all books in the catalog regardless of availability.
+        # Find the book
+        book = self._find_book(book_id)
 
-        Returns:
-            List[Book]: All books in the catalog.
-        """
-        with self.db.get_connection() as conn:
-            rows = conn.execute(
-                "SELECT * FROM books ORDER BY title ASC"
-            ).fetchall()
-
-        return [Book.from_row(row) for row in rows]
-
-    def search_books(self, keyword: str, field: str = "all") -> List[Book]:
-        """
-        Searches books by title, author, or both fields.
-
-        Args:
-            keyword (str): The search keyword (case-insensitive partial match).
-            field (str): Search field — 'title', 'author', or 'all'.
-
-        Returns:
-            List[Book]: Matching Book objects.
-
-        Raises:
-            InvalidOperationError: If field is not a valid option.
-        """
-        keyword = keyword.strip()
-        if not keyword:
-            raise InvalidOperationError("Search keyword cannot be empty.")
-
-        pattern = f"%{keyword}%"
-
-        field_options = {"title", "author", "all"}
-        if field not in field_options:
-            raise InvalidOperationError(
-                f"Invalid search field '{field}'. Choose from: {field_options}"
+        # Do not delete an issued book
+        if book["status"] == "Issued":
+            raise LibraryError(
+                "Issued books cannot be deleted."
             )
 
-        with self.db.get_connection() as conn:
-            if field == "title":
-                rows = conn.execute(
-                    "SELECT * FROM books WHERE title LIKE ? ORDER BY title ASC",
-                    (pattern,),
-                ).fetchall()
-            elif field == "author":
-                rows = conn.execute(
-                    "SELECT * FROM books WHERE author LIKE ? ORDER BY author ASC",
-                    (pattern,),
-                ).fetchall()
-            else:  # all
-                rows = conn.execute(
-                    """
-                    SELECT * FROM books
-                    WHERE title LIKE ? OR author LIKE ?
-                    ORDER BY title ASC
-                    """,
-                    (pattern, pattern),
-                ).fetchall()
+        # Delete book
+        self.books.remove(book)
 
-        return [Book.from_row(row) for row in rows]
+        # Save changes
+        self._save_all()
 
-    def get_book_by_id(self, book_id: int) -> Book:
-        """
-        Fetches a single book by its ID.
+    def search_books(self, query):
 
-        Args:
-            book_id (int): The book's primary key.
+        # Convert search text to lowercase
+        query = query.lower()
 
-        Returns:
-            Book: The matching Book object.
+        # Search multiple fields
+        return [
+            book
+            for book in self.books
+            if query in book["book_id"].lower()
+            or query in book["title"].lower()
+            or query in book["author"].lower()
+            or query in book["category"].lower()
+        ]
 
-        Raises:
-            BookNotFoundError: If no book with that ID exists.
-        """
-        with self.db.get_connection() as conn:
-            row = conn.execute(
-                "SELECT * FROM books WHERE book_id = ?", (book_id,)
-            ).fetchone()
+    def _find_book(self, book_id):
 
-        if row is None:
-            raise BookNotFoundError(book_id)
+        # Search book by ID
+        for book in self.books:
 
-        return Book.from_row(row)
+            if book["book_id"].lower() == book_id.lower():
+                return book
 
-    # ==========================================================================
-    # Student / Member Management
-    # ==========================================================================
+        # If not found
+        raise LibraryError("Invalid book ID.")
 
-    def register_student(self, name: str, email: str) -> Student:
-        """
-        Registers a new library member (student).
+    # ------------------------------------------------
+    # STUDENT OPERATIONS
+    # ------------------------------------------------
 
-        Args:
-            name (str): Full name of the student.
-            email (str): Unique email address.
+    def add_student(
+        self,
+        student_id,
+        name,
+        email="",
+        phone=""
+    ):
 
-        Returns:
-            Student: The newly registered Student object with its assigned ID.
-
-        Raises:
-            InvalidOperationError: If name or email is empty / invalid.
-            DuplicateEmailError: If a student with that email already exists.
-        """
-        name = name.strip()
-        email = email.strip().lower()
-
-        if not name:
-            raise InvalidOperationError("Student name cannot be empty.")
-        if not email or "@" not in email:
-            raise InvalidOperationError("Please enter a valid email address.")
-
-        with self.db.get_connection() as conn:
-            existing = conn.execute(
-                "SELECT student_id FROM students WHERE email = ?", (email,)
-            ).fetchone()
-            if existing:
-                raise DuplicateEmailError(email)
-
-            cursor = conn.execute(
-                "INSERT INTO students (name, email) VALUES (?, ?)",
-                (name, email),
+        # Student ID and name are required
+        if not student_id or not name:
+            raise LibraryError(
+                "Student ID and name are required."
             )
-            conn.commit()
-            student_id = cursor.lastrowid
 
-        return Student(student_id=student_id, name=name, email=email)
+        # Check duplicate student ID
+        if any(
+            student["student_id"].lower() == student_id.lower()
+            for student in self.students
+        ):
+            raise LibraryError(
+                "Student ID already exists."
+            )
 
-    def list_students(self) -> List[Student]:
-        """
-        Returns all registered students.
+        # Create Student object
+        student = Student(
+            student_id,
+            name,
+            email,
+            phone
+        )
 
-        Returns:
-            List[Student]: All student records.
-        """
-        with self.db.get_connection() as conn:
-            rows = conn.execute(
-                "SELECT * FROM students ORDER BY name ASC"
-            ).fetchall()
+        # Store student
+        self.students.append(student.to_dict())
 
-        return [Student.from_row(row) for row in rows]
+        # Save data
+        self._save_all()
 
-    def get_student_by_id(self, student_id: int) -> Student:
-        """
-        Fetches a single student by their ID.
+    def _find_student(self, student_id):
 
-        Args:
-            student_id (int): The student's primary key.
+        # Search student by ID
+        for student in self.students:
 
-        Returns:
-            Student: The matching Student object.
+            if student["student_id"].lower() == student_id.lower():
+                return student
 
-        Raises:
-            StudentNotFoundError: If no student with that ID exists.
-        """
-        with self.db.get_connection() as conn:
-            row = conn.execute(
-                "SELECT * FROM students WHERE student_id = ?", (student_id,)
-            ).fetchone()
+        raise LibraryError("Invalid student ID.")
 
-        if row is None:
-            raise StudentNotFoundError(student_id)
-
-        return Student.from_row(row)
-
-    # ==========================================================================
-    # Book Issues — Issue & Return
-    # ==========================================================================
+    # ------------------------------------------------
+    # ISSUE BOOK
+    # ------------------------------------------------
 
     def issue_book(
         self,
-        book_id: int,
-        student_id: int,
-        duration_days: int = DEFAULT_LENDING_DAYS,
-    ) -> dict:
-        """
-        Issues a book to a student.
+        book_id,
+        student_id,
+        days
+    ):
 
-        Decrements available_copies by 1 and creates an ISSUED record in issues.
+        # Find book
+        book = self._find_book(book_id)
 
-        Args:
-            book_id (int): The book to issue.
-            student_id (int): The student borrowing the book.
-            duration_days (int): Lending window in days.
+        # Check student
+        self._find_student(student_id)
 
-        Returns:
-            dict: Issue summary with issue_date, due_date, and IDs.
-
-        Raises:
-            BookNotFoundError: If book_id is invalid.
-            StudentNotFoundError: If student_id is invalid.
-            BookUnavailableError: If no copies are available.
-            AlreadyIssuedError: If the student already has this book issued.
-        """
-        book = self.get_book_by_id(book_id)
-        student = self.get_student_by_id(student_id)
-
-        if book.available_copies <= 0:
-            raise BookUnavailableError(book_id)
-
-        with self.db.get_connection() as conn:
-            active = conn.execute(
-                """
-                SELECT issue_id FROM issues
-                WHERE book_id = ? AND student_id = ? AND status = 'ISSUED'
-                """,
-                (book_id, student_id),
-            ).fetchone()
-            if active:
-                raise AlreadyIssuedError(book_id, student_id)
-
-            today = date.today()
-            due = today + timedelta(days=duration_days)
-
-            cursor = conn.execute(
-                """
-                INSERT INTO issues
-                    (book_id, student_id, issue_date, due_date, fine_status, status)
-                VALUES (?, ?, ?, ?, 'NONE', 'ISSUED')
-                """,
-                (book_id, student_id, today.isoformat(), due.isoformat()),
+        # Check whether book is already issued
+        if book["status"] == "Issued":
+            raise LibraryError(
+                "This book is already issued."
             )
 
-            conn.execute(
-                """
-                UPDATE books
-                SET available_copies = available_copies - 1
-                WHERE book_id = ?
-                """,
-                (book_id,),
+        # Convert days to integer
+        try:
+            days = int(days)
+
+        except ValueError:
+            raise LibraryError(
+                "Borrowing days must be a number."
             )
 
-            conn.commit()
-            issue_id = cursor.lastrowid
+        # Validate borrowing days
+        if days < 1 or days > 30:
+            raise LibraryError(
+                "Borrowing days must be between 1 and 30."
+            )
 
-        return {
-            "issue_id": issue_id,
-            "book_id": book_id,
-            "book_title": book.title,
+        # Today's date
+        issue_date = date.today()
+
+        # Calculate due date
+        due_date = issue_date + timedelta(days=days)
+
+        # Change book status
+        book["status"] = "Issued"
+
+        # Create transaction
+        transaction = {
+
+            "transaction_id": f"T{len(self.transactions) + 1:03d}",
+
+            "book_id": book["book_id"],
+
+            "title": book["title"],
+
             "student_id": student_id,
-            "student_name": student.name,
-            "issue_date": today.isoformat(),
-            "due_date": due.isoformat(),
+
+            "issue_date": issue_date.isoformat(),
+
+            "due_date": due_date.isoformat(),
+
+            "return_date": "",
+
+            "charge": 0,
+
+            "overdue_charge": 0,
+
+            "status": "Issued"
         }
 
-    def return_book(self, book_id: int, student_id: int) -> dict:
-        """
-        Processes a book return.
+        # Add transaction
+        self.transactions.append(transaction)
 
-        Calculates any overdue fine, updates the issue record with fine_status:
-        - 'DUE'  if fine_amount > 0 (user still owes money)
-        - 'NONE' if returned on time
+        # Save everything
+        self._save_all()
 
-        Args:
-            book_id (int): The book being returned.
-            student_id (int): The student returning the book.
+    # ------------------------------------------------
+    # RETURN BOOK
+    # ------------------------------------------------
 
-        Returns:
-            dict: Return summary including fine_amount, fine_status, dates.
+    def return_book(self, book_id):
 
-        Raises:
-            BookNotFoundError: If book_id is invalid.
-            StudentNotFoundError: If student_id is invalid.
-            BookNotIssuedError: If no active issue exists for this pair.
-        """
-        book = self.get_book_by_id(book_id)
-        student = self.get_student_by_id(student_id)
+        # Find book
+        book = self._find_book(book_id)
 
-        with self.db.get_connection() as conn:
-            txn = conn.execute(
-                """
-                SELECT * FROM issues
-                WHERE book_id = ? AND student_id = ? AND status = 'ISSUED'
-                ORDER BY issue_date DESC
-                LIMIT 1
-                """,
-                (book_id, student_id),
-            ).fetchone()
-
-            if txn is None:
-                raise BookNotIssuedError(book_id, student_id)
-
-            today = date.today()
-            fine = self.calculate_overdue_fee(txn["due_date"], today.isoformat())
-            fine_status = "DUE" if fine > 0 else "NONE"
-
-            conn.execute(
-                """
-                UPDATE issues
-                SET return_date = ?,
-                    fine_amount = ?,
-                    fine_status = ?,
-                    status = 'RETURNED'
-                WHERE issue_id = ?
-                """,
-                (today.isoformat(), fine, fine_status, txn["issue_id"]),
+        # Check book status
+        if book["status"] != "Issued":
+            raise LibraryError(
+                "This book is not currently issued."
             )
 
-            conn.execute(
-                """
-                UPDATE books
-                SET available_copies = available_copies + 1
-                WHERE book_id = ?
-                """,
-                (book_id,),
+        transaction = None
+
+        # Find latest issue transaction
+        for item in reversed(self.transactions):
+
+            if (
+                item["book_id"].lower() == book_id.lower()
+                and item["status"] == "Issued"
+            ):
+
+                transaction = item
+                break
+
+        # Transaction not found
+        if transaction is None:
+            raise LibraryError(
+                "Issue transaction not found."
             )
 
-            conn.commit()
+        # Today's date
+        today = date.today()
 
+        # Convert due date from text to date
+        due_date = date.fromisoformat(
+            transaction["due_date"]
+        )
+
+        # Calculate overdue days
+        overdue_days = max(
+            (today - due_date).days,
+            0
+        )
+
+        # Calculate fine
+        charge = (
+            overdue_days *
+            self.DAILY_OVERDUE_CHARGE
+        )
+
+        # Update transaction
+        transaction["return_date"] = today.isoformat()
+
+        transaction["charge"] = charge
+        transaction["overdue_charge"] = charge
+
+        transaction["status"] = "Returned"
+
+        # Change book status
+        book["status"] = "Available"
+
+        # Save changes
+        self._save_all()
+
+        # Return fine information
         return {
-            "issue_id": txn["issue_id"],
-            "book_id": book_id,
-            "book_title": book.title,
-            "student_id": student_id,
-            "student_name": student.name,
-            "issue_date": txn["issue_date"],
-            "due_date": txn["due_date"],
-            "return_date": today.isoformat(),
-            "fine_amount": fine,
-            "fine_status": fine_status,
+            "charge": charge,
+            "overdue_days": overdue_days
         }
 
-    # ==========================================================================
-    # Overdue Fee Calculation
-    # ==========================================================================
+    # ------------------------------------------------
+    # BOOK STATUS
+    # ------------------------------------------------
 
-    def calculate_overdue_fee(
-        self,
-        due_date_str: str,
-        return_date_str: str,
-        rate_per_day: float = FINE_RATE_PER_DAY,
-    ) -> float:
-        """
-        Calculates overdue fine based on days past due.
+    def get_available_books(self):
 
-        Args:
-            due_date_str (str): Due date in ISO format (YYYY-MM-DD).
-            return_date_str (str): Return/today date in ISO format.
-            rate_per_day (float): Fine amount per overdue day.
+        return [
+            book
+            for book in self.books
+            if book["status"] == "Available"
+        ]
 
-        Returns:
-            float: Total fine amount (0.0 if on time or early).
-        """
-        due = date.fromisoformat(due_date_str)
-        returned = date.fromisoformat(return_date_str)
-        days_late = max(0, (returned - due).days)
-        return round(days_late * rate_per_day, 2)
+    def get_issued_books(self):
 
-    # ==========================================================================
-    # Fine Payment System
-    # ==========================================================================
+        return [
+            book
+            for book in self.books
+            if book["status"] == "Issued"
+        ]
 
-    def pay_fine(self, issue_id: int) -> dict:
-        """
-        Marks an outstanding fine as PAID.
+    # ------------------------------------------------
+    # STATISTICS
+    # ------------------------------------------------
 
-        Args:
-            issue_id (int): The issue record whose fine should be marked paid.
+    def statistics(self):
 
-        Returns:
-            dict: Payment summary with student, book, amount, and new status.
+        # Get all transactions
+        issued_transactions = [
+            transaction
+            for transaction in self.transactions
+            if transaction["status"]
+            in ("Issued", "Returned")
+        ]
 
-        Raises:
-            IssueNotFoundError: If no issue with that ID exists.
-            FineNotDueError: If the issue has no outstanding fine (status != 'DUE').
-        """
-        with self.db.get_connection() as conn:
-            row = conn.execute(
-                """
-                SELECT i.*, b.title AS book_title, s.name AS student_name
-                FROM issues i
-                JOIN books b ON i.book_id = b.book_id
-                JOIN students s ON i.student_id = s.student_id
-                WHERE i.issue_id = ?
-                """,
-                (issue_id,),
-            ).fetchone()
+        # Count book issues
+        issue_counts = {}
 
-            if row is None:
-                raise IssueNotFoundError(issue_id)
+        for transaction in issued_transactions:
 
-            if row["fine_status"] != "DUE":
-                raise FineNotDueError(issue_id)
+            title = transaction["title"]
 
-            conn.execute(
-                "UPDATE issues SET fine_status = 'PAID' WHERE issue_id = ?",
-                (issue_id,),
-            )
-            conn.commit()
+            if title not in issue_counts:
+                issue_counts[title] = 0
 
+            issue_counts[title] += 1
+
+        # Sort most issued books
+        most_issued = []
+        for title, count in sorted(
+            issue_counts.items(),
+            key=lambda item: item[1],
+            reverse=True
+        )[:5]:
+            author = "Unknown"
+            for b in self.books:
+                if b.get("title", "").strip().lower() == title.strip().lower():
+                    author = b.get("author", "Unknown")
+                    break
+            most_issued.append({
+                "title": title,
+                "author": author,
+                "issue_count": count
+            })
+
+        # Calculate total charges
+        total_charges = sum(
+            float(transaction.get("charge") or transaction.get("overdue_charge") or 0)
+            for transaction in self.transactions
+        )
+
+        # Return statistics
         return {
-            "issue_id": issue_id,
-            "book_id": row["book_id"],
-            "book_title": row["book_title"],
-            "student_id": row["student_id"],
-            "student_name": row["student_name"],
-            "fine_amount": row["fine_amount"],
-            "fine_status": "PAID",
-        }
 
-    def list_due_fines(self) -> List[dict]:
-        """
-        Returns all issue records with outstanding (DUE) fines.
+            "total_books": len(self.books),
 
-        Returns:
-            List[dict]: Issues where fine_status = 'DUE', with book/student info.
-        """
-        with self.db.get_connection() as conn:
-            rows = conn.execute(
-                """
-                SELECT
-                    i.issue_id,
-                    b.book_id,
-                    b.title AS book_title,
-                    s.student_id,
-                    s.name AS student_name,
-                    i.issue_date,
-                    i.due_date,
-                    i.return_date,
-                    i.fine_amount,
-                    i.fine_status
-                FROM issues i
-                JOIN books b ON i.book_id = b.book_id
-                JOIN students s ON i.student_id = s.student_id
-                WHERE i.fine_status = 'DUE'
-                ORDER BY i.fine_amount DESC
-                """
-            ).fetchall()
+            "available_books": len(
+                self.get_available_books()
+            ),
 
-        return [dict(row) for row in rows]
+            "issued_books": len(
+                self.get_issued_books()
+            ),
 
-    def list_due_fines_by_student(self, student_id: int) -> List[dict]:
-        """
-        Returns all outstanding (DUE) fines for a specific student.
+            "total_students": len(self.students),
 
-        Args:
-            student_id (int): The student's primary key.
+            "total_transactions": len(
+                self.transactions
+            ),
 
-        Returns:
-            List[dict]: DUE fines for that student.
+            "total_charges": total_charges,
 
-        Raises:
-            StudentNotFoundError: If the student_id is invalid.
-        """
-        # Validate student exists
-        self.get_student_by_id(student_id)
-
-        with self.db.get_connection() as conn:
-            rows = conn.execute(
-                """
-                SELECT
-                    i.issue_id,
-                    b.book_id,
-                    b.title AS book_title,
-                    s.student_id,
-                    s.name AS student_name,
-                    i.issue_date,
-                    i.due_date,
-                    i.return_date,
-                    i.fine_amount,
-                    i.fine_status
-                FROM issues i
-                JOIN books b ON i.book_id = b.book_id
-                JOIN students s ON i.student_id = s.student_id
-                WHERE i.fine_status = 'DUE' AND i.student_id = ?
-                ORDER BY i.fine_amount DESC
-                """,
-                (student_id,),
-            ).fetchall()
-
-        return [dict(row) for row in rows]
-
-    def list_paid_fines(self) -> List[dict]:
-        """
-        Returns all issue records with collected (PAID) fines representing income.
-
-        Returns:
-            List[dict]: Issues where fine_status = 'PAID', with book/student info.
-        """
-        with self.db.get_connection() as conn:
-            rows = conn.execute(
-                """
-                SELECT
-                    i.issue_id,
-                    b.book_id,
-                    b.title AS book_title,
-                    s.student_id,
-                    s.name AS student_name,
-                    i.issue_date,
-                    i.due_date,
-                    i.return_date,
-                    i.fine_amount,
-                    i.fine_status
-                FROM issues i
-                JOIN books b ON i.book_id = b.book_id
-                JOIN students s ON i.student_id = s.student_id
-                WHERE i.fine_status = 'PAID'
-                ORDER BY i.return_date DESC
-                """
-            ).fetchall()
-
-        return [dict(row) for row in rows]
-
-    def list_paid_fines_by_student(self, student_id: int) -> List[dict]:
-        """
-        Returns all paid fines (income) collected from a specific student.
-
-        Args:
-            student_id (int): The student's primary key.
-
-        Returns:
-            List[dict]: PAID fines for that student.
-
-        Raises:
-            StudentNotFoundError: If the student_id is invalid.
-        """
-        self.get_student_by_id(student_id)
-
-        with self.db.get_connection() as conn:
-            rows = conn.execute(
-                """
-                SELECT
-                    i.issue_id,
-                    b.book_id,
-                    b.title AS book_title,
-                    s.student_id,
-                    s.name AS student_name,
-                    i.issue_date,
-                    i.due_date,
-                    i.return_date,
-                    i.fine_amount,
-                    i.fine_status
-                FROM issues i
-                JOIN books b ON i.book_id = b.book_id
-                JOIN students s ON i.student_id = s.student_id
-                WHERE i.fine_status = 'PAID' AND i.student_id = ?
-                ORDER BY i.return_date DESC
-                """,
-                (student_id,),
-            ).fetchall()
-
-        return [dict(row) for row in rows]
-
-    # ==========================================================================
-    # Issue Listings
-    # ==========================================================================
-
-    def list_active_issues(self) -> List[dict]:
-        """
-        Returns all currently active (ISSUED) issues with book/student details.
-
-        Returns:
-            List[dict]: Each dict has issue_id, book/student details, dates.
-        """
-        with self.db.get_connection() as conn:
-            rows = conn.execute(
-                """
-                SELECT
-                    i.issue_id,
-                    b.book_id,
-                    b.title AS book_title,
-                    s.student_id,
-                    s.name AS student_name,
-                    i.issue_date,
-                    i.due_date
-                FROM issues i
-                JOIN books b ON i.book_id = b.book_id
-                JOIN students s ON i.student_id = s.student_id
-                WHERE i.status = 'ISSUED'
-                ORDER BY i.due_date ASC
-                """
-            ).fetchall()
-
-        return [dict(row) for row in rows]
-
-    def list_all_issues(self) -> List[dict]:
-        """
-        Returns all issue records (both ISSUED and RETURNED) with full details.
-
-        Returns:
-            List[dict]: All issue records sorted by issue_date descending.
-        """
-        with self.db.get_connection() as conn:
-            rows = conn.execute(
-                """
-                SELECT
-                    i.issue_id,
-                    b.book_id,
-                    b.title AS book_title,
-                    s.student_id,
-                    s.name AS student_name,
-                    i.issue_date,
-                    i.due_date,
-                    i.return_date,
-                    i.fine_amount,
-                    i.fine_status,
-                    i.status
-                FROM issues i
-                JOIN books b ON i.book_id = b.book_id
-                JOIN students s ON i.student_id = s.student_id
-                ORDER BY i.issue_date DESC
-                """
-            ).fetchall()
-
-        return [dict(row) for row in rows]
-
-    # ==========================================================================
-    # Statistics & Reporting
-    # ==========================================================================
-
-    def get_statistics(self) -> dict:
-        """
-        Generates a statistical summary of the library's current state.
-
-        Returns:
-            dict: Summary stats including counts, fine totals, and top-issued books.
-        """
-        with self.db.get_connection() as conn:
-            total_books = conn.execute(
-                "SELECT COUNT(*) as cnt FROM books"
-            ).fetchone()["cnt"]
-
-            available_count = conn.execute(
-                "SELECT SUM(available_copies) as cnt FROM books"
-            ).fetchone()["cnt"] or 0
-
-            total_copies = conn.execute(
-                "SELECT SUM(total_copies) as cnt FROM books"
-            ).fetchone()["cnt"] or 0
-
-            issued_count = conn.execute(
-                "SELECT COUNT(*) as cnt FROM issues WHERE status = 'ISSUED'"
-            ).fetchone()["cnt"]
-
-            total_fines_paid = conn.execute(
-                """
-                SELECT COALESCE(SUM(fine_amount), 0.0) as total
-                FROM issues
-                WHERE fine_status = 'PAID'
-                """
-            ).fetchone()["total"]
-
-            total_fines_due = conn.execute(
-                """
-                SELECT COALESCE(SUM(fine_amount), 0.0) as total
-                FROM issues
-                WHERE fine_status = 'DUE'
-                """
-            ).fetchone()["total"]
-
-            # Top issued books
-            top_books_rows = conn.execute(
-                f"""
-                SELECT
-                    b.book_id,
-                    b.title,
-                    b.author,
-                    COUNT(i.issue_id) AS times_issued
-                FROM issues i
-                JOIN books b ON i.book_id = b.book_id
-                GROUP BY i.book_id
-                ORDER BY times_issued DESC
-                LIMIT {TOP_ISSUED_BOOKS_LIMIT}
-                """
-            ).fetchall()
-
-            top_books = [dict(row) for row in top_books_rows]
-
-            total_issues = conn.execute(
-                "SELECT COUNT(*) as cnt FROM issues"
-            ).fetchone()["cnt"]
-
-        return {
-            "total_unique_books": total_books,
-            "total_copies": total_copies,
-            "available_copies": available_count,
-            "currently_issued": issued_count,
-            "total_issues": total_issues,
-            "total_fines_paid": total_fines_paid,
-            "total_fines_due": total_fines_due,
-            "top_issued_books": top_books,
+            "most_issued": most_issued
         }
